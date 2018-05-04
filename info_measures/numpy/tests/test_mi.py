@@ -35,7 +35,7 @@ def test_mvn_ksg_mutual_information():
                               'k-nn mutual information estimate was incorrect.')
 
 
-"""
+'''
 def test_mvn_ksg_mutual_information():
     """Test Kraskov=Stoegbauer-Grassberger mutual information
     estimator on multivariate normal data."""
@@ -60,4 +60,4 @@ def test_mvn_ksg_mutual_information():
                               'k-nn mutual information estimate was incorrect.')
         npt.assert_array_less(abs(mi-mik2.mean()), 2. * mik2.std(),
                               'k-nn mutual information estimate was incorrect.')
-                              """
+                              '''
