@@ -1,6 +1,6 @@
 import numpy as np
 from numpy import testing as npt
-from scipy.stats import (multivariate_normal, ttest_1samp)
+from scipy.stats import multivariate_normal
 
 from info_measures.numpy import (kraskov_stoegbauer_grassberger as ksg,
                                  kolchinsky_tracey as kt)
