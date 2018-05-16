@@ -30,6 +30,14 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
+def _digamma(x):
+    count = 1
+    #Euler-Mascheroni constant
+    value = -0.57721566490153286060651209008240243104215933593992
+    while count < int(x):
+        value += 1/float(count)
+        count += 1
+    return value
 
 class Entropy(object):
     """Estimate the entropy of a distribution based on
@@ -138,6 +146,37 @@ class MutualInformation(object):
         return mi
 
 
+    def mutual_information_v(self, k=None, kind=None, n_jobs=-1):
+        """ Mutual information of x and y
+            x, y should be a list of vectors, e.g. x = [[1.3], [3.7], [5.1], [2.4]]
+            if x is a one-dimensional scalar and we have four samples
+        """
+        if k is None:
+            k = self.k
+        assert k <= self.n_samples - 1
+        if kind is None:
+            kind = self.kind
+        assert kind in [1, 2]
+        # Find nearest neighbors in joint space, p=inf means max-norm
+        if kind == 1:
+            dvec = self.tree.query(self.Z, k + 1, p=float('inf'), n_jobs=n_jobs)[0][:,k]
+            a = avgdigamma1_v(self.Xtree, self.X, dvec, n_jobs)
+            b = avgdigamma1_v(self.Ytree, self.Y, dvec, n_jobs)
+            mi =  -a - b
+        elif kind == 2:
+            didxs = self.tree.query(self.Z, k + 1, p=float('inf'), n_jobs=n_jobs)[1] [:,1:]
+            Xdvec = [np.linalg.norm(xi[np.newaxis]-self.X[idxs], ord=np.inf, axis=-1).max() for xi, idxs in zip(self.X, didxs)]
+            Ydvec = [np.linalg.norm(yi[np.newaxis]-self.Y[idxs], ord=np.inf, axis=-1).max() for yi, idxs in zip(self.Y, didxs)]
+            a = avgdigamma2_v(self.Xtree, self.X, Xdvec, n_jobs)
+            b = avgdigamma2_v(self.Ytree, self.Y, Ydvec, n_jobs)
+            mi =  -a - b - 1./k
+        else:
+            raise ValueError('kind must be either 1 or 2.')
+        c, d = digamma(k), digamma(self.n_samples)
+        mi += c + d
+        return mi
+
+
 def avgdigamma1(tree, points, dvec):
     # This part finds number of neighbors in some radius in the marginal space
     # returns expectation value of <psi(nx)>
@@ -158,4 +197,21 @@ def avgdigamma2(tree, points, dvec):
     for point, dist in zip(points, dvec):
         num_points = len(tree.query_ball_point(point, dist, p=float('inf')))
         avg += digamma(num_points - 1) / N
+    return avg
+
+
+def avgdigamma1_v(tree, points, dvec, n_jobs):
+    # This part finds number of neighbors in some radius in the marginal space
+    # returns expectation value of <psi(nx)>
+    ns = [len(x) for x in tree.query_ball_point(points, dvec - 1e-15,
+                                                p=float('inf'), n_jobs=n_jobs)]
+    avg = np.mean([digamma(n) for n in ns])
+    return avg
+
+def avgdigamma2_v(tree, points, dvec, n_jobs):
+    # This part finds number of neighbors in some radius in the marginal space
+    # returns expectation value of <psi(nx)>
+    ns = [len(x) for x in tree.query_ball_point(points, dvec,
+                                                p=float('inf'), n_jobs=n_jobs)]
+    avg = np.mean([digamma(n-1) for n in ns])
     return avg
