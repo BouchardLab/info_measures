@@ -1,7 +1,6 @@
 import numpy as np
 from scipy.special import factorial
 import numba
-from numba import prange, njit
 
 class DatasetGenerator(object):
     """Generate datasets for use in Predictive Information calculations.
@@ -45,23 +44,6 @@ class DatasetGenerator(object):
         def sample_data(self, grow_dim, sample_all=True):
             raise NotImplementedError
 
-@njit
-def _sample_data2(X, out, grow_dim, n_samples_per_image):
-    n_X, n_i, n_f = X.shape
-    sample_dim = 2 * grow_dim
-    for ii in range(n_samples_per_image):
-        for jj in range(n_X):
-            out[ii*n_X + jj] = np.random.permutation(X[jj])[:sample_dim]
-
-
-@njit(parallel=True)
-def _sample_data3(X, out, grow_dim, n_samples_per_image):
-    n_X, n_i, n_f = X.shape
-    sample_dim = 2 * grow_dim
-    for ii in prange(n_samples_per_image*n_X):
-        jj = ii // n_X
-        out[ii] = np.random.permutation(X[jj])[:sample_dim]
-
 
 class VectorSpaceGenerator(DatasetGenerator):
     """Generate a dataset assuming the data lives in a vectorspace."""
@@ -74,42 +56,18 @@ class VectorSpaceGenerator(DatasetGenerator):
 
     def sample_data(self, grow_dim, n_samples_per_image):
         n_X, n_i, n_f = self.X.shape
-        X = np.transpose(self.X, (1, 0, 2)).copy()
         """
         all_samples = n_X * factorial(n_i, exact=True) // (factorial(n_i - 2 * grow_dim, exact=True))
         log_all_samples = np.log10(float(all_samples))
         """
         n_samples = n_X * n_samples_per_image
         sample_dim = 2 * grow_dim
-        out = np.full((sample_dim, n_samples, n_f), np.nan)
+        out = np.full((n_samples, sample_dim, n_f), np.nan)
         for ii in range(n_samples_per_image):
-            self.rng.shuffle(X)
-            out[:,ii*n_X:(ii+1)*n_X] = X[:sample_dim]
-        return np.transpose(out, (1, 0, 2))
-
-
-    def sample_data2(self, grow_dim, n_samples_per_image):
-        n_X, n_i, n_f = self.X.shape
-        """
-        all_samples = n_X * factorial(n_i, exact=True) // (factorial(n_i - 2 * grow_dim, exact=True))
-        log_all_samples = np.log10(float(all_samples))
-        """
-        n_samples = n_X * n_samples_per_image
-        sample_dim = 2 * grow_dim
-        out = np.full((n_samples, sample_dim, n_f), np.nan)
-        _sample_data2(self.X, out, grow_dim, n_samples_per_image)
-        return out
-
-    def sample_data3(self, grow_dim, n_samples_per_image):
-        n_X, n_i, n_f = self.X.shape
-        """
-        all_samples = n_X * factorial(n_i, exact=True) // (factorial(n_i - 2 * grow_dim, exact=True))
-        log_all_samples = np.log10(float(all_samples))
-        """
-        n_samples = n_X * n_samples_per_image
-        sample_dim = 2 * grow_dim
-        out = np.full((n_samples, sample_dim, n_f), np.nan)
-        _sample_data3(self.X, out, grow_dim, n_samples_per_image)
+            x0 = np.tile(np.arange(n_X)[:,np.newaxis], (1, n_i))
+            x1 = np.argsort(self.rng.randn(*self.X.shape[:2]), axis=1)
+            X = self.X[x0, x1].reshape(self.X.shape)
+            out[ii*n_X:(ii+1)*n_X] = X[:, :sample_dim]
         return out
 
 
