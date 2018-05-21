@@ -6,7 +6,7 @@ from info_measures.numpy import kraskov_stoegbauer_grassberger as ksg
 
 rng = np.random.RandomState(20180518)
 n_repeat = 10
-n_samples = np.logspace(3, 6, 4, dtype=int)
+n_samples = np.logspace(3, 7, 10, dtype=int)
 n_cores = multiprocessing.cpu_count()
 
 timings = np.zeros((2, n_samples.size, n_cores, n_repeat))
