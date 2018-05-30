@@ -79,6 +79,10 @@ class MutualInformation(object):
         k-nearest-neighbor will be used.
     """
     def __init__(self, X, Y, k=3, kind=1, add_noise=False):
+        intens = 1e-10  # small noise to break degeneracy, see doc.
+        if add_noise:
+            X = X.astype(float) + intens * np.random.randn(*X.shape)
+            Y = Y.astype(float) + intens * np.random.randn(*Y.shape)
         X = self.normalize(X)
         Y = self.normalize(Y)
         self.k = k
@@ -89,10 +93,6 @@ class MutualInformation(object):
         assert n_Xsamples == n_Ysamples
         self.n_samples = n_Xsamples
         assert k <= self.n_samples - 1
-        intens = 1e-10  # small noise to break degeneracy, see doc.
-        if add_noise:
-            X = X.astype(float) + intens * np.random.randn(*X.shape)
-            Y = Y.astype(float) + intens * np.random.randn(*Y.shape)
         self.X = X
         self.Y = Y
         self.Z = np.concatenate([self.X, self.Y], axis=1)

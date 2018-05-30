@@ -4,13 +4,15 @@ import numba
 
 class DatasetGenerator(object):
     """Generate datasets for use in Predictive Information calculations.
+    Data is assumed to have
 
     Parameters
     ----------
     X : ndarray (n_batch, ..., n_features)
         Dataset.
     symmetry_axes : int or list
-        List of axes with translational symmetry."""
+        List of axes with translational symmetry.
+        """
 
     def __init__(self, X, symmetry_axes=None, seed=20180516):
         self.rng = np.random.RandomState(seed)
@@ -64,17 +66,25 @@ class VectorSpaceGenerator(DatasetGenerator):
         sample_dim = 2 * grow_dim
         out = np.full((n_samples, sample_dim, n_f), np.nan)
         for ii in range(n_samples_per_image):
-            x0 = np.tile(np.arange(n_X)[:,np.newaxis], (1, n_i))
-            x1 = np.argsort(self.rng.randn(*self.X.shape[:2]), axis=1)
-            X = self.X[x0, x1].reshape(self.X.shape)
-            out[ii*n_X:(ii+1)*n_X] = X[:, :sample_dim]
+            x0 = np.tile(np.arange(n_X)[:,np.newaxis], (1, n_i))[:, :sample_dim]
+            x1 = np.argsort(self.rng.randn(*self.X.shape[:2]), axis=1)[:, :sample_dim]
+            X = self.X[x0, x1].reshape(n_X, sample_dim, n_f)
+            out[ii*n_X:(ii+1)*n_X] = X
         return out
 
 
 class ImageGenerator(DatasetGenerator):
-    """Generate a dataset assuming the data lives in a vectorspace."""
+    """Generate a dataset assuming the data lives in an image space.
+
+    Parameters
+    ----------
+    X : ndarray (n_batch, height, width, n_channels)
+        Dataset.
+    """
 
     def __init__(self, X, grow_axis, symmetry_axes=None):
+        if X.ndim != 4:
+            raise ValueError('Images must be 3 dimensional: h by w by c.')
         if symmetry_axes is None:
             symmetry_axes = (1, 2)
         if len(symmetry_axes) != 2:
@@ -94,7 +104,7 @@ class ImageGenerator(DatasetGenerator):
 
         n_X, n_g, n_p, n_f = self.X.shape
         n_samples = n_X * (n_g + 1 - 2 * grow_dim) * (n_p + 1 - perp_dim)
-        sample_dim = (2 * grow_dim) * perp_dim * np.prod(self.X.shape[3:], dtype=int)
+        sample_dim = (2 * grow_dim) * perp_dim
         out = np.full((n_samples, sample_dim, n_f), np.nan)
         loc = 0
         for ii in range(n_g + 1 - (2 * grow_dim)):
@@ -102,5 +112,39 @@ class ImageGenerator(DatasetGenerator):
                 s = loc * n_X
                 e = (loc + 1) * n_X
                 out[s:e] = self.X[:,ii:ii+2*grow_dim,jj:jj+perp_dim].reshape(n_X, -1, n_f)
+                loc += 1
+        return out
+
+
+class MultiChannelTimeseriesGenerator(DatasetGenerator):
+    """Generate a dataset assuming the data is multichannel timeseries.
+
+    Many neural datasets fit this description.
+
+    Parameters
+    ----------
+    X : ndarray (n_batch, n_time, n_channels, n_features)
+        Dataset.
+    """
+
+    def __init__(self, X):
+        symmetry_axes = 1
+        super(MultiChannelTimeseriesGenerator, self).__init__(X, symmetry_axes=symmetry_axes)
+
+
+    def sample_data(self, time_dim, n_channels=None, channel_resamplings_per_sample=1):
+        if n_channels is None:
+            n_channels = self.X.shape[2]
+        n_X, n_t, n_c, n_f = self.X.shape
+        n_samples = n_X * (n_t + 1 - (2 * time_dim)) * channel_resamplings_per_sample
+        sample_dim = (2 * time_dim) * n_channels
+        out = np.full((n_samples, sample_dim, n_f), np.nan)
+        loc = 0
+        for ii in range(n_t + 1 - (2 * time_dim)):
+            for jj in range(channel_resamplings_per_sample):
+                s = loc * n_X
+                e = (loc + 1) * n_X
+                channels = self.rng.permutation(n_c)[:n_channels]
+                out[s:e] = self.X[:,ii:ii+2*time_dim][:, :, channels].reshape(n_X, -1, n_f)
                 loc += 1
         return out
