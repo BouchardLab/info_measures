@@ -56,20 +56,36 @@ class VectorSpaceGenerator(DatasetGenerator):
         self.X = self.X[:, std > 0]
 
 
-    def sample_data(self, grow_dim, n_samples_per_image):
+    def sample_data(self, grow_dim, resamplings_per_datapoint=None, n_samples=None):
         n_X, n_i, n_f = self.X.shape
         """
         all_samples = n_X * factorial(n_i, exact=True) // (factorial(n_i - 2 * grow_dim, exact=True))
         log_all_samples = np.log10(float(all_samples))
         """
-        n_samples = n_X * n_samples_per_image
+        n_sample_locs = n_X
+        if n_samples is None:
+            if resamplings_per_datapoint is None:
+                resamplings_per_datapoint = 1
+            n_samples = n_X * resamplings_per_datapoint
+        else:
+            if resamplings_per_datapoint is not None:
+                raise ValueError
+        iters = int(np.ceil(n_samples / n_sample_locs))
+
         sample_dim = 2 * grow_dim
         out = np.full((n_samples, sample_dim, n_f), np.nan)
-        for ii in range(n_samples_per_image):
-            x0 = np.tile(np.arange(n_X)[:,np.newaxis], (1, n_i))[:, :sample_dim]
-            x1 = np.argsort(self.rng.randn(*self.X.shape[:2]), axis=1)[:, :sample_dim]
-            X = self.X[x0, x1].reshape(n_X, sample_dim, n_f)
-            out[ii*n_X:(ii+1)*n_X] = X
+
+        for ii in range(iters):
+            if (ii+1)*n_X <= n_samples:
+                x0 = np.tile(np.arange(n_X)[:,np.newaxis], (1, n_i))[:, :sample_dim]
+                x1 = np.argsort(self.rng.randn(*self.X.shape[:2]), axis=1)[:, :sample_dim]
+                X = self.X[x0, x1].reshape(n_X, sample_dim, n_f)
+                out[ii*n_X:(ii+1)*n_X] = X
+            else:
+                for jj in range(ii*n_X, n_samples):
+                    idx = self.rng.randint(n_X)
+                    order = self.rng.permutation(n_i)[:sample_dim]
+                    out[jj] = self.X[idx][order]
         return out
 
 
@@ -98,21 +114,35 @@ class ImageGenerator(DatasetGenerator):
         super(ImageGenerator, self).__init__(X, symmetry_axes=symmetry_axes)
 
 
-    def sample_data(self, grow_dim, perp_dim = None, sample_all=True):
+    def sample_data(self, grow_dim, perp_dim=None, n_samples=None):
         if perp_dim is None:
             perp_dim = self.X.shape[self.perp_axis]
-
         n_X, n_g, n_p, n_f = self.X.shape
-        n_samples = n_X * (n_g + 1 - 2 * grow_dim) * (n_p + 1 - perp_dim)
+
+        n_sample_locs = n_X * (n_g + 1 - (2 * grow_dim)) * (n_p + 1 - perp_dim)
+        if n_samples is None:
+            n_samples = n_sample_locs
+        else:
+            if n_samples > n_sample_locs:
+                raise ValueError('It is not possible to generate this many unique samples.')
+
         sample_dim = (2 * grow_dim) * perp_dim
         out = np.full((n_samples, sample_dim, n_f), np.nan)
-        loc = 0
-        for ii in range(n_g + 1 - (2 * grow_dim)):
-            for jj in range(n_p + 1 - perp_dim):
-                s = loc * n_X
-                e = (loc + 1) * n_X
-                out[s:e] = self.X[:,ii:ii+2*grow_dim,jj:jj+perp_dim].reshape(n_X, -1, n_f)
-                loc += 1
+        if n_samples == n_sample_locs:
+            print('here')
+            loc = 0
+            for ii in range(n_g + 1 - (2 * grow_dim)):
+                for jj in range(n_p + 1 - perp_dim):
+                    s = loc * n_X
+                    e = (loc + 1) * n_X
+                    out[s:e] = self.X[:,ii:ii+2*grow_dim,jj:jj+perp_dim].reshape(n_X, -1, n_f)
+                    loc += 1
+        else:
+            for ii in range(n_samples):
+                idx = self.rng.randint(n_X)
+                g_idx = self.rng.randint(n_g - (2 * grow_dim))
+                p_idx = self.rng.randint(n_p - perp_dim)
+                out[ii] = self.X[idx,g_idx:g_idx+2*grow_dim,p_idx:p_idx+perp_dim].reshape(-1, n_f)
         return out
 
 
@@ -132,19 +162,35 @@ class MultiChannelTimeseriesGenerator(DatasetGenerator):
         super(MultiChannelTimeseriesGenerator, self).__init__(X, symmetry_axes=symmetry_axes)
 
 
-    def sample_data(self, time_dim, n_channels=None, channel_resamplings_per_sample=1):
+    def sample_data(self, time_dim, n_channels=None, channel_resamplings_per_datapoint=None, n_samples=None):
         if n_channels is None:
             n_channels = self.X.shape[2]
         n_X, n_t, n_c, n_f = self.X.shape
-        n_samples = n_X * (n_t + 1 - (2 * time_dim)) * channel_resamplings_per_sample
+        n_sample_locs = n_X * (n_t + 1 - (2 * time_dim))
+        if n_samples is None:
+            if channel_resamplings_per_datapoint is None:
+                channel_resamplings_per_datapoint = 1
+            n_samples = n_X * (n_t + 1 - (2 * time_dim)) * channel_resamplings_per_datapoint
+        else:
+            if channel_resamplings_per_datapoint is not None:
+                raise ValueError
+        iters = int(np.ceil(n_samples / n_sample_locs))
         sample_dim = (2 * time_dim) * n_channels
         out = np.full((n_samples, sample_dim, n_f), np.nan)
         loc = 0
-        for ii in range(n_t + 1 - (2 * time_dim)):
-            for jj in range(channel_resamplings_per_sample):
-                s = loc * n_X
-                e = (loc + 1) * n_X
-                channels = self.rng.permutation(n_c)[:n_channels]
-                out[s:e] = self.X[:,ii:ii+2*time_dim][:, :, channels].reshape(n_X, -1, n_f)
-                loc += 1
+        e = 0
+        for ii in range(iters):
+            if e + n_sample_locs <= n_samples:
+                for jj in range(n_t + 1 - (2 * time_dim)):
+                    s = loc * n_X
+                    e = (loc + 1) * n_X
+                    channels = self.rng.permutation(n_c)[:n_channels]
+                    out[s:e] = self.X[:,jj:jj+2*time_dim][:, :, channels].reshape(n_X, -1, n_f)
+                    loc += 1
+            else:
+                for jj in range(e, n_samples):
+                    idx = self.rng.randint(n_X)
+                    t = self.rng.randint(n_t - (2 * time_dim))
+                    channels = self.rng.permutation(n_c)[:n_channels]
+                    out[jj] = self.X[idx, t:t+2*time_dim][:, channels].reshape(-1, n_f)
         return out

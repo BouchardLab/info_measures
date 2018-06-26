@@ -1190,7 +1190,7 @@ cdef public class cKDTree [object ckdtree, type ckdtree_type]:
                         for j in range(m):
                             tmp[j] = cur[0]
                             cur += 1
-                        result[c] = sorted(tmp)
+                        result[c] = tmp
                     else:
                         result[c] = []
                     i += 1
