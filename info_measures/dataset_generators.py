@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.special import factorial
-import numba
+
 
 class DatasetGenerator(object):
     """Generate datasets for use in Predictive Information calculations.
@@ -15,6 +15,7 @@ class DatasetGenerator(object):
         """
 
     def __init__(self, X, symmetry_axes=None, seed=20180516):
+        print(seed)
         self.rng = np.random.RandomState(seed)
         if X.ndim < 3:
             raise ValueError("X must have at least 3 dimensions.")
@@ -48,10 +49,16 @@ class DatasetGenerator(object):
 
 
 class VectorSpaceGenerator(DatasetGenerator):
-    """Generate a dataset assuming the data lives in a vectorspace."""
+    """Generate a dataset assuming the data lives in a vectorspace.
 
-    def __init__(self, X):
-        super(VectorSpaceGenerator, self).__init__(X)
+    Parameters
+    ----------
+    X : ndarray (n_batch, dims, n_channels)
+        Dataset.
+    """
+
+    def __init__(self, X, seed=20180516):
+        super(VectorSpaceGenerator, self).__init__(X, seed=seed)
         std = self.X.std(axis=(0, 2))
         self.X = self.X[:, std > 0]
 
@@ -98,7 +105,7 @@ class ImageGenerator(DatasetGenerator):
         Dataset.
     """
 
-    def __init__(self, X, grow_axis, symmetry_axes=None):
+    def __init__(self, X, grow_axis, symmetry_axes=None, seed=20180516):
         if X.ndim != 4:
             raise ValueError('Images must be 3 dimensional: h by w by c.')
         if symmetry_axes is None:
@@ -111,7 +118,7 @@ class ImageGenerator(DatasetGenerator):
         self.perp_axis = 2
         if grow_axis == symmetry_axes[1]:
             symmetry_axes = (symmetry_axes[1], symmetry_axes[0])
-        super(ImageGenerator, self).__init__(X, symmetry_axes=symmetry_axes)
+        super(ImageGenerator, self).__init__(X, symmetry_axes=symmetry_axes, seed=seed)
 
 
     def sample_data(self, grow_dim, perp_dim=None, n_samples=None):
@@ -157,12 +164,13 @@ class MultiChannelTimeseriesGenerator(DatasetGenerator):
         Dataset.
     """
 
-    def __init__(self, X):
+    def __init__(self, X, seed=20180516):
         symmetry_axes = 1
-        super(MultiChannelTimeseriesGenerator, self).__init__(X, symmetry_axes=symmetry_axes)
+        super(MultiChannelTimeseriesGenerator, self).__init__(X, symmetry_axes=symmetry_axes, seed=seed)
 
 
-    def sample_data(self, time_dim, n_channels=None, channel_resamplings_per_datapoint=None, n_samples=None):
+    def sample_data(self, time_dim, n_channels=None,
+                    channel_resamplings_per_datapoint=None, n_samples=None):
         if n_channels is None:
             n_channels = self.X.shape[2]
         n_X, n_t, n_c, n_f = self.X.shape
