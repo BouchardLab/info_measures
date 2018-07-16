@@ -1,5 +1,6 @@
-import argparse, h5py
+import argparse, h5py, pickle, os
 import numpy as np
+
 
 from info_measures.numpy import kraskov_stoegbauer_grassberger as ksg
 from info_measures.dataset_generators import (VectorSpaceGenerator,
@@ -17,26 +18,27 @@ parser.add_argument('--dim', '-d', type=int, required=True,
                     help='Dimension for each variable.')
 parser.add_argument('--seed', type=int, required=True,
                     help='Random seed.')
+parser.add_argument('--save_folder', type=str, required=True,
+                    help='Base location to save results.')
 parser.add_argument('--shuffle', '-s', action='store_true',
                     help='Shuffle samples w.r.t. each other.')
 parser.add_argument('--grow_axis', '-g', type=int,
                     help='Which image axis to use as PI growth axis.')
 
 args = parser.parse_args()
-print(args)
 data_file = args.data_file
 dim = args.dim
 dataset_type = args.dataset_type
 n_samples = args.n_samples
 seed = args.seed
 shuffle = args.shuffle
+save_folder = args.save_folder
 args = vars(args)
 if shuffle and not isinstance(seed, int):
     raise ValueError
 
 with h5py.File(data_file) as f:
     raw_data = f['X'].value
-print(raw_data.shape)
 
 ndim = raw_data.ndim
 if dataset_type == 'v':
@@ -64,5 +66,26 @@ if shuffle:
     rng.shuffle(Y)
 mi_e = ksg.MutualInformation(X, Y)
 args['mi'] = mi_e.mutual_information(n_jobs=-1)
+
+if shuffle:
+    file_name = 'shuffle_{}.h5'.format(seed)
+else:
+    file_name = '{}.h5'.format(seed)
+save_path = os.path.join(save_folder,
+                         os.path.splitext(data_file)[0],
+                         dataset_type,
+                         '{}_samples'.format(str(n_samples)))
+try:
+    os.makedirs(save_path)
+except FileExistsError:
+    pass
+
+save_path = os.path.join(save_path, file_name)
+with open(save_path, 'wb') as f:
+    pickle.dump(args, f)
+
+with open(save_path, 'rb') as f:
+    d = pickle.load(f)
+print(save_path)
 print(args)
 print(args['mi'])

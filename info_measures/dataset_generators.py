@@ -15,7 +15,6 @@ class DatasetGenerator(object):
         """
 
     def __init__(self, X, symmetry_axes=None, seed=20180516):
-        print(seed)
         self.rng = np.random.RandomState(seed)
         if X.ndim < 3:
             raise ValueError("X must have at least 3 dimensions.")
@@ -136,7 +135,6 @@ class ImageGenerator(DatasetGenerator):
         sample_dim = (2 * grow_dim) * perp_dim
         out = np.full((n_samples, sample_dim, n_f), np.nan)
         if n_samples == n_sample_locs:
-            print('here')
             loc = 0
             for ii in range(n_g + 1 - (2 * grow_dim)):
                 for jj in range(n_p + 1 - perp_dim):
