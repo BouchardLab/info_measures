@@ -2,7 +2,7 @@ import argparse, h5py, pickle, os
 import numpy as np
 
 
-from info_measures.numpy import kraskov_stoegbauer_grassberger as ksg
+from info_measures.continuous import kraskov_stoegbauer_grassberger as ksg
 from info_measures.dataset_generators import (VectorSpaceGenerator,
                                               ImageGenerator,
                                               MultiChannelTimeseriesGenerator)
