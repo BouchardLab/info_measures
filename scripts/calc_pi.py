@@ -62,11 +62,11 @@ Y = samples[:, dim:]
 Y = Y.reshape(n_samples, -1)
 
 mi_e = ksg.MutualInformation(X, Y)
-args['mi'] = mi_e.mutual_information(n_jobs=-1)
+args['mi'] = mi_e.mutual_information(n_jobs=4)
 
 rng.shuffle(Y)
 mi_e = ksg.MutualInformation(X, Y)
-args['mi_shuffle'] = mi_e.mutual_information(n_jobs=-1)
+args['mi_shuffle'] = mi_e.mutual_information(n_jobs=4)
 
 file_name = '{}d_{}s.pkl'.format(dim, seed)
 save_path = os.path.join(save_folder,

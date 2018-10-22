@@ -33,7 +33,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 class Entropy(object):
-    """Estimate the entropy of a distribution based on
+    """Estimate the entropy of a distribution with continuous support based on
     nearest-neighbor methods.
 
     Parameters
@@ -41,7 +41,9 @@ class Entropy(object):
     X : data (n_samples, n_dim)
         Data matrix
     k : int
-        k-nearest-neighbor will be used.
+        k-nearest-neighbor will be used. (default=3)
+    add_noise : bool
+        Small (1e-10) noise to break degeneracy. (default=False)
     """
     def __init__(self, X, k=3, add_noise=False):
         self.k = k
@@ -55,10 +57,7 @@ class Entropy(object):
 
 
     def entropy(self, k=None, n_jobs=-1):
-        """ The classic K-L k-nearest neighbor continuous entropy estimator
-            x should be a list of vectors, e.g. x = [[1.3], [3.7], [5.1], [2.4]]
-            if x is a one-dimensional scalar and we have four samples
-        """
+        """ The classic K-L k-nearest neighbor continuous entropy estimator."""
         if k is None:
             k = self.k
         assert k <= self.n_samples - 1
@@ -68,8 +67,8 @@ class Entropy(object):
 
 
 class MutualInformation(object):
-    """Estimate the mutual information between two variables based on
-    nearest-neighbor methods.
+    """Estimate the mutual information between two variables with continuous
+    support based on nearest-neighbor methods.
 
     Parameters
     ----------
@@ -77,6 +76,8 @@ class MutualInformation(object):
         Data matrix
     k : int
         k-nearest-neighbor will be used.
+    add_noise : bool
+        Small (1e-10) noise to break degeneracy. (default=False)
     """
     def __init__(self, X, Y, k=3, kind=1, add_noise=False):
         intens = 1e-10  # small noise to break degeneracy, see doc.
@@ -109,10 +110,7 @@ class MutualInformation(object):
 
 
     def mutual_information(self, k=None, kind=None, n_jobs=-1):
-        """ Mutual information of x and y
-            x, y should be a list of vectors, e.g. x = [[1.3], [3.7], [5.1], [2.4]]
-            if x is a one-dimensional scalar and we have four samples
-        """
+        """ Mutual information between x and y."""
         if k is None:
             k = self.k
         assert k <= self.n_samples - 1
