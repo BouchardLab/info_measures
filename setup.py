@@ -17,13 +17,16 @@ here = path.abspath(path.dirname(__file__))
 with open(path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
+pkgs = find_packages()
+print("found the following packages:", pkgs)
 setup(
     name='info_measures',
     description='Information measures.',
     long_description=long_description,
     author='Jesse Livezey',
     author_email='jesse.livezey@gmail.com',
-
+    packages=pkgs,
+    package_data = {'info_measures.spatial': ['ckdtree.*']},
     install_requires = [
       'numpy',
       'scipy']
