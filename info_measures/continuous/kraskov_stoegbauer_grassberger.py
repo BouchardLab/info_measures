@@ -76,6 +76,8 @@ class MutualInformation(object):
         Data matrix
     k : int
         k-nearest-neighbor will be used.
+    kind : int
+        Type 1 or 2 estimator.
     add_noise : bool
         Small (1e-10) noise to break degeneracy. (default=False)
     """
@@ -110,7 +112,17 @@ class MutualInformation(object):
 
 
     def mutual_information(self, k=None, kind=None, n_jobs=-1):
-        """ Mutual information between x and y."""
+        """ Mutual information between x and y.
+
+        Parameters
+        ----------
+        k : int
+            k-nearest-neighbor will be used.
+        kind : int
+            Type 1 or 2 estimator.
+        n_jobs : int
+            Number of processes to use.
+        """
         if k is None:
             k = self.k
         assert k <= self.n_samples - 1
