@@ -2,12 +2,13 @@ import numpy as np
 from numpy import testing as npt
 from scipy.stats import multivariate_normal
 
-from info_measures.numpy import (kraskov_stoegbauer_grassberger as ksg,
+from info_measures.continuous import (kraskov_stoegbauer_grassberger as ksg,
                                  kolchinsky_tracey as kt)
 
 
 def mvn_mi(rho):
     return -0.5 * np.log(1. - rho**2)
+
 
 def test_mvn_ksg_mutual_information():
     """Test Kraskov=Stoegbauer-Grassberger mutual information

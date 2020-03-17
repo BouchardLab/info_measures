@@ -2,12 +2,12 @@ import numpy as np
 from numpy import testing as npt
 from scipy.stats import multivariate_normal
 
-from info_measures.numpy import (kraskov_stoegbauer_grassberger as ksg,
-                                 kolchinsky_tracey as kt)
+from info_measures.continuous import (kraskov_stoegbauer_grassberger as ksg,
+                                      kolchinsky_tracey as kt)
 
 
 def mvn_entropy(mean, covariance):
-    return np.asscalar(multivariate_normal(mean, covariance).entropy())
+    return multivariate_normal(mean, covariance).entropy().item()
 
 
 def test_mvn_kt_entropy():

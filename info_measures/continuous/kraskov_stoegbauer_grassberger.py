@@ -1,5 +1,4 @@
-#import scipy.spatial as ss
-from info_measures import spatial as ss
+import scipy.spatial as ss
 from scipy.special import digamma
 from math import log
 import numpy as np
@@ -48,7 +47,8 @@ class Entropy(object):
     def __init__(self, X, k=3, add_noise=False):
         self.k = k
         self.n_samples, self.n_dim = X.shape
-        assert k <= self.n_samples - 1
+        if k > self.n_samples:
+            raise ValueError('The number of neighbors must be smaller than the dataset size.')
         intens = 1e-10  # small noise to break degeneracy, see doc.
         if add_noise:
             X = X.astype(float) + intens * np.random.randn(*X.shape)
@@ -60,7 +60,8 @@ class Entropy(object):
         """ The classic K-L k-nearest neighbor continuous entropy estimator."""
         if k is None:
             k = self.k
-        assert k <= self.n_samples - 1
+        if k > self.n_samples:
+            raise ValueError('The number of neighbors must be smaller than the dataset size.')
         nn = self.tree.query(self.X, k + 1, p=float('inf'), n_jobs=n_jobs)[0][:, k]
         const = digamma(self.n_samples) - digamma(k) + self.n_dim *log(2)
         return const + self.n_dim * np.mean(np.log(nn))
@@ -90,12 +91,15 @@ class MutualInformation(object):
         Y = self.normalize(Y)
         self.k = k
         self.kind = kind
-        assert kind in [1, 2]
+        if kind not in [1, 2]:
+            raise ValueError
         n_Xsamples, self.n_Xdim = X.shape
         n_Ysamples, self.n_Ydim = Y.shape
-        assert n_Xsamples == n_Ysamples
+        if n_Xsamples != n_Ysamples:
+            raise ValueError
         self.n_samples = n_Xsamples
-        assert k <= self.n_samples - 1
+        if k > self.n_samples - 1:
+            raise ValueError('The number of neighbors must be smaller than the dataset size.')
         self.X = X
         self.Y = Y
         self.Z = np.concatenate([self.X, self.Y], axis=1)
@@ -125,10 +129,12 @@ class MutualInformation(object):
         """
         if k is None:
             k = self.k
-        assert k <= self.n_samples - 1
+        if k > self.n_samples - 1:
+            raise ValueError('The number of neighbors must be smaller than the dataset size.')
         if kind is None:
             kind = self.kind
-        assert kind in [1, 2]
+        if kind not in [1, 2]:
+            raise ValueError
         # Find nearest neighbors in joint space, p=inf means max-norm
         if kind == 1:
             dvec = self.tree.query(self.Z, k + 1, p=float('inf'), n_jobs=n_jobs)[0][:,k]
@@ -152,13 +158,14 @@ class MutualInformation(object):
 def avgdigamma1(tree, points, dvec, n_jobs):
     # This part finds number of neighbors in some radius in the marginal space
     # returns expectation value of <psi(nx)>
-    ns = tree.count_ball_point(points, dvec - 1e-15,
-                               p=float('inf'), n_jobs=n_jobs)
+    ns = tree.query_ball_point(points, r=dvec - 1e-15, p=float('inf'), n_jobs=n_jobs,
+                               return_sorted=False, return_length=True)
     return digamma(ns).mean()
 
 
 def avgdigamma2(tree, points, dvec, n_jobs):
     # This part finds number of neighbors in some radius in the marginal space
     # returns expectation value of <psi(nx)>
-    ns = tree.count_ball_point(points, dvec, p=float('inf'), n_jobs=n_jobs)
+    ns = tree.query_ball_point(points, r=dvec, p=float('inf'), n_jobs=n_jobs,
+                               return_sorted=False, return_length=True)
     return digamma(ns-1).mean()
