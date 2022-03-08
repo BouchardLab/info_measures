@@ -56,13 +56,13 @@ class Entropy(object):
         self.tree = ss.cKDTree(self.X)
 
 
-    def entropy(self, k=None, n_jobs=-1):
+    def entropy(self, k=None, workers=-1):
         """ The classic K-L k-nearest neighbor continuous entropy estimator."""
         if k is None:
             k = self.k
         if k > self.n_samples:
             raise ValueError('The number of neighbors must be smaller than the dataset size.')
-        nn = self.tree.query(self.X, k + 1, p=float('inf'), n_jobs=n_jobs)[0][:, k]
+        nn = self.tree.query(self.X, k + 1, p=float('inf'), workers=workers)[0][:, k]
         const = digamma(self.n_samples) - digamma(k) + self.n_dim *log(2)
         return const + self.n_dim * np.mean(np.log(nn))
 
@@ -115,7 +115,7 @@ class MutualInformation(object):
         return X
 
 
-    def mutual_information(self, k=None, kind=None, n_jobs=-1):
+    def mutual_information(self, k=None, kind=None, workers=-1):
         """ Mutual information between x and y.
 
         Parameters
@@ -124,7 +124,7 @@ class MutualInformation(object):
             k-nearest-neighbor will be used.
         kind : int
             Type 1 or 2 estimator.
-        n_jobs : int
+        workers : int
             Number of processes to use.
         """
         if k is None:
@@ -137,16 +137,16 @@ class MutualInformation(object):
             raise ValueError
         # Find nearest neighbors in joint space, p=inf means max-norm
         if kind == 1:
-            dvec = self.tree.query(self.Z, k + 1, p=float('inf'), n_jobs=n_jobs)[0][:,k]
-            a = avgdigamma1(self.Xtree, self.X, dvec, n_jobs)
-            b = avgdigamma1(self.Ytree, self.Y, dvec, n_jobs)
+            dvec = self.tree.query(self.Z, k + 1, p=float('inf'), workers=workers)[0][:,k]
+            a = avgdigamma1(self.Xtree, self.X, dvec, workers)
+            b = avgdigamma1(self.Ytree, self.Y, dvec, workers)
             mi =  -a - b
         elif kind == 2:
-            didxs = self.tree.query(self.Z, k + 1, p=float('inf'), n_jobs=n_jobs)[1] [:,1:]
+            didxs = self.tree.query(self.Z, k + 1, p=float('inf'), workers=workers)[1] [:,1:]
             Xdvec = [np.linalg.norm(xi[np.newaxis]-self.X[idxs], ord=np.inf, axis=-1).max() for xi, idxs in zip(self.X, didxs)]
             Ydvec = [np.linalg.norm(yi[np.newaxis]-self.Y[idxs], ord=np.inf, axis=-1).max() for yi, idxs in zip(self.Y, didxs)]
-            a = avgdigamma2(self.Xtree, self.X, Xdvec, n_jobs)
-            b = avgdigamma2(self.Ytree, self.Y, Ydvec, n_jobs)
+            a = avgdigamma2(self.Xtree, self.X, Xdvec, workers)
+            b = avgdigamma2(self.Ytree, self.Y, Ydvec, workers)
             mi =  -a - b - 1./k
         else:
             raise ValueError('kind must be either 1 or 2.')
@@ -155,17 +155,17 @@ class MutualInformation(object):
         return mi
 
 
-def avgdigamma1(tree, points, dvec, n_jobs):
+def avgdigamma1(tree, points, dvec, workers):
     # This part finds number of neighbors in some radius in the marginal space
     # returns expectation value of <psi(nx)>
-    ns = tree.query_ball_point(points, r=dvec - 1e-15, p=float('inf'), n_jobs=n_jobs,
+    ns = tree.query_ball_point(points, r=dvec - 1e-15, p=float('inf'), workers=workers,
                                return_sorted=False, return_length=True)
     return digamma(ns).mean()
 
 
-def avgdigamma2(tree, points, dvec, n_jobs):
+def avgdigamma2(tree, points, dvec, workers):
     # This part finds number of neighbors in some radius in the marginal space
     # returns expectation value of <psi(nx)>
-    ns = tree.query_ball_point(points, r=dvec, p=float('inf'), n_jobs=n_jobs,
+    ns = tree.query_ball_point(points, r=dvec, p=float('inf'), workers=workers,
                                return_sorted=False, return_length=True)
     return digamma(ns-1).mean()
