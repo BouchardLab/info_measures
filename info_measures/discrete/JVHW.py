@@ -12,7 +12,105 @@ Theory 61, no. 5 (2015): 2835-2885.
 """
 
 
-def est_entro_JVHW(samp):
+def est_entro_JVHW(X):
+    """JVHW estimate of Shannon entropy (in bits) of the input samples. This function handles input
+    encoding via np.unique.
+
+    Parameters
+    ----------
+    X: ndarray (n_samples, ...)
+        A ndarray of samples from a discrete alphabet. For 1d arrays, each element is taken as a
+        samples. For Nd arrays, each row is taken as a sample.
+
+    Returns
+    -------
+     est: float
+         The entropy (in bits) of the input samples.
+    """
+    if X.ndim == 1:
+        _, X = np.unique(X, return_inverse=True)
+    else:
+        _, X = np.unique(X, axis=0, return_inverse=True)
+    return np.squeeze(_est_entro_JVHW(X))
+
+
+def est_entro_MLE(X):
+    """ML estimate of Shannon entropy (in bits) of the input samples. This function handles input
+    encoding via np.unique.
+
+    Parameters
+    ----------
+    X: ndarray (n_samples, ...)
+        A ndarray of samples from a discrete alphabet. For 1d arrays, each element is taken as a
+        samples. For Nd arrays, each row is taken as a sample.
+
+    Returns
+    -------
+     est: float
+         The entropy (in bits) of the input samples.
+    """
+    if X.ndim == 1:
+        _, X = np.unique(X, return_inverse=True)
+    else:
+        _, X = np.unique(X, axis=0, return_inverse=True)
+    return np.squeeze(_est_entro_MLE(X))
+
+
+def est_MI_JVHW(X, Y):
+    """JVHW estimate of Shannon mutual information (in bits) of the input samples. This function
+    handles input encoding via np.unique.
+
+    Parameters
+    ----------
+    X: ndarray (n_samples, ...)
+        A ndarray of samples from a discrete alphabet. For 1d arrays, each element is taken as a
+        samples. For Nd arrays, each row is taken as a sample.
+    Y: ndarray (n_samples, ...)
+        A ndarray of samples from a discrete alphabet. For 1d arrays, each element is taken as a
+        samples. For Nd arrays, each row is taken as a sample.
+
+    Returns
+    -------
+     est: float
+         The mutual information (in bits) of the input samples.
+    """
+    if X.ndim == 1:
+        _, X = np.unique(X, return_inverse=True)
+        _, Y = np.unique(Y, return_inverse=True)
+    else:
+        _, X = np.unique(X, axis=0, return_inverse=True)
+        _, Y = np.unique(Y, axis=0, return_inverse=True)
+    return np.squeeze(_est_MI_JVHW(X, Y))
+
+
+def est_MI_MLE(X, Y):
+    """ML estimate of Shannon mutual information (in bits) of the input sample. This function
+    handles input encoding via np.unique.
+
+    Parameters
+    ----------
+    X: ndarray (n_samples, ...)
+        A ndarray of samples from a discrete alphabet. For 1d arrays, each element is taken as a
+        samples. For Nd arrays, each row is taken as a sample.
+    Y: ndarray (n_samples, ...)
+        A ndarray of samples from a discrete alphabet. For 1d arrays, each element is taken as a
+        samples. For Nd arrays, each row is taken as a sample.
+
+    Returns
+    -------
+     est: float
+         The entropy (in bits) of the input samples.
+    """
+    if X.ndim == 1:
+        _, X = np.unique(X, return_inverse=True)
+        _, Y = np.unique(Y, return_inverse=True)
+    else:
+        _, X = np.unique(X, axis=0, return_inverse=True)
+        _, Y = np.unique(Y, axis=0, return_inverse=True)
+    return np.squeeze(_est_MI_MLE(X, Y))
+
+
+def _est_entro_JVHW(samp):
     """Proposed JVHW estimate of Shannon entropy (in bits) of the input sample
     This function returns a scalar JVHW estimate of the entropy of samp when
     samp is a vector, or returns a row vector containing the JVHW estimate of
@@ -83,7 +181,7 @@ def entro_mat(x, n, g_coeff, c_1):
     return np.maximum(output, 0)
 
 
-def est_entro_MLE(samp):
+def _est_entro_MLE(samp):
     """Maximum likelihood estimate of Shannon entropy (in bits) of the input
     sample
     This function returns a scalar MLE of the entropy of samp when samp is a
@@ -143,7 +241,7 @@ def fingerprint(samp):
     return np.array([np.r_[col, [0] * (f_max - len(col))] for col in f_col]).T
 
 
-def est_MI_JVHW(X, Y):
+def _est_MI_JVHW(X, Y):
     """This function returns our scalar estimate of mutual information I(X;Y)
     when both X and Y are vectors, and returns a row vector consisting
     of the estimate of mutual information between each corresponding column
@@ -160,10 +258,10 @@ def est_MI_JVHW(X, Y):
     [X, Y, XY] = formalize(X, Y)
 
     # I(X,Y) = H(X) + H(Y) - H(X,Y)
-    return np.maximum(0, est_entro_JVHW(X) + est_entro_JVHW(Y) - est_entro_JVHW(XY))
+    return np.maximum(0, _est_entro_JVHW(X) + _est_entro_JVHW(Y) - _est_entro_JVHW(XY))
 
 
-def est_MI_MLE(X, Y):
+def _est_MI_MLE(X, Y):
     """This function returns the scalar MLE of the mutual information I(X;Y)
     when both X and Y are vectors, and returns a row vector consisting
     of the estimate of mutual information between each corresponding column
@@ -182,7 +280,7 @@ def est_MI_MLE(X, Y):
     [X, Y, XY] = formalize(X, Y)
 
     # I(X,Y) = H(X) + H(Y) - H(X,Y)
-    return np.maximum(0, est_entro_MLE(X) + est_entro_MLE(Y) - est_entro_MLE(XY))
+    return np.maximum(0, _est_entro_MLE(X) + _est_entro_MLE(Y) - _est_entro_MLE(XY))
 
 
 def formalize(X, Y):
